@@ -1,5 +1,7 @@
 Independent project that I worked on as a submission for the UW-Madison Undergraduate Statistic's Club.
 
+Programmed in R-Studio.
+
 Spring 2025 Data Challenge
 
 Foreword:
@@ -9,6 +11,7 @@ Introduction to the Data Challenge:
 This Data Challenge explores the factors influencing individuals’ decisions to pursue an MBA. The dataset includes demographic, academic, and financial information to uncover trends in MBA enrollment. By analyzing these factors, the challenge aims to provide insights into what drives the decision to pursue an MBA and how different backgrounds shape this choice.
 
 Relevant Variable Explanation:
+
 Age: Age at the time of decision
 Gender: Male, Female, Other
 Undergraduate Major: Engineering, Business, Arts, Science, etc.
