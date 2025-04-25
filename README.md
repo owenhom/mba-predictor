@@ -13,11 +13,16 @@ This Data Challenge explores the factors influencing individuals’ decisions to
 Relevant Variable Explanation:
 
 Age: Age at the time of decision
+
 Gender: Male, Female, Other
+
 Undergraduate Major: Engineering, Business, Arts, Science, etc.
 Undergraduate GPA: Scale from 0 to 4
+
 GRE/GMAT Score: Standardized test score
+
 MBA Funding Source: Self-funded, Loan, Scholarship, Employer
+
 Decided to Pursue MBA?: Yes/No (Target Variable)
 
 Data Challenge Question: 
