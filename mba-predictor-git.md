@@ -7,13 +7,81 @@ Model \#1
 
 Libraries
 
+``` r
 library(tidyverse)
-library(caret)
-library(xgboost)
-library(themis)
-library(recipes)
+```
 
+    ## Warning: package 'ggplot2' was built under R version 4.4.2
+
+    ## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+    ## ✔ dplyr     1.1.4     ✔ readr     2.1.5
+    ## ✔ forcats   1.0.0     ✔ stringr   1.5.1
+    ## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+    ## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+    ## ✔ purrr     1.0.2     
+    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ✖ dplyr::filter() masks stats::filter()
+    ## ✖ dplyr::lag()    masks stats::lag()
+    ## ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+
+``` r
+library(caret)
+```
+
+    ## Warning: package 'caret' was built under R version 4.4.2
+
+    ## Loading required package: lattice
+    ## 
+    ## Attaching package: 'caret'
+    ## 
+    ## The following object is masked from 'package:purrr':
+    ## 
+    ##     lift
+
+``` r
+library(xgboost)
+```
+
+    ## Warning: package 'xgboost' was built under R version 4.4.2
+
+    ## 
+    ## Attaching package: 'xgboost'
+    ## 
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     slice
+
+``` r
+library(themis)
+```
+
+    ## Warning: package 'themis' was built under R version 4.4.2
+
+    ## Loading required package: recipes
+    ## 
+    ## Attaching package: 'recipes'
+    ## 
+    ## The following object is masked from 'package:stringr':
+    ## 
+    ##     fixed
+    ## 
+    ## The following object is masked from 'package:stats':
+    ## 
+    ##     step
+
+``` r
+library(recipes)
+```
+
+Load Data
+
+``` r
 mba_data <- read.csv("mba_decision_dataset.csv")
+```
+
+2/11
+
+``` r
 
 engineer_features <- function(data) {
   data <- data %>%
@@ -21,11 +89,14 @@ engineer_features <- function(data) {
       Age_Scaled = scale(Age),
       GPA_Scaled = scale(Undergraduate.GPA),
       Test_Score_Scaled = scale(GRE.GMAT.Score),
+      
       Age_Group = cut(Age, breaks = c(0, 25, 30, 100), 
-                      labels = c("Young", "Mid", "Senior"))
+                    labels = c("Young", "Mid", "Senior"))
     )
+  
   categorical_vars <- c("Gender", "Undergraduate.Major", "MBA.Funding.Source", "Age_Group")
   data[categorical_vars] <- lapply(data[categorical_vars], as.factor)
+  
   return(data)
 }
 
@@ -36,7 +107,8 @@ mba_features <- mba_data %>%
   select(-matches("Decided.to.Pursue.MBA"), -Person.ID)
 
 set.seed(123)
-trainIndex <- createDataPartition(mba_data$Decided.to.Pursue.MBA, p = 0.8, list = FALSE, times = 1)
+trainIndex <- createDataPartition(mba_data$Decided.to.Pursue.MBA, p = 0.8, 
+                                list = FALSE, times = 1)
 trainData <- mba_features[trainIndex, ]
 testData <- mba_features[-trainIndex, ]
 trainData$Decided.to.Pursue.MBA <- mba_data$Decided.to.Pursue.MBA[trainIndex]
@@ -51,12 +123,12 @@ trainData_balanced <- bake(prep_obj, new_data = NULL)
 
 train_control <- trainControl(
   method = "repeatedcv",
-  number = 5,
+  number = 5,  
   repeats = 3,
   classProbs = TRUE,
   summaryFunction = twoClassSummary,
-  sampling = "down",
-  search = "grid"
+  sampling = "down",  
+  search = "grid"     
 )
 
 xgb_grid <- expand.grid(
@@ -78,7 +150,10 @@ xgb_model <- train(
   metric = "ROC",
   verbose = FALSE
 )
+```
 
+
+``` r
 test_recipe <- recipe(Decided.to.Pursue.MBA ~ ., data = testData) %>%
   step_dummy(all_nominal_predictors())
 
@@ -90,35 +165,151 @@ predictions_prob <- predict(xgb_model, testData_processed, type = "prob")
 
 conf_matrix <- confusionMatrix(predictions, testData$Decided.to.Pursue.MBA)
 print(conf_matrix)
+```
 
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction  No Yes
+    ##        No  187 252
+    ##        Yes 631 929
+    ##                                           
+    ##                Accuracy : 0.5583          
+    ##                  95% CI : (0.5362, 0.5802)
+    ##     No Information Rate : 0.5908          
+    ##     P-Value [Acc > NIR] : 0.9985          
+    ##                                           
+    ##                   Kappa : 0.0164          
+    ##                                           
+    ##  Mcnemar's Test P-Value : <2e-16          
+    ##                                           
+    ##             Sensitivity : 0.22861         
+    ##             Specificity : 0.78662         
+    ##          Pos Pred Value : 0.42597         
+    ##          Neg Pred Value : 0.59551         
+    ##              Prevalence : 0.40920         
+    ##          Detection Rate : 0.09355         
+    ##    Detection Prevalence : 0.21961         
+    ##       Balanced Accuracy : 0.50761         
+    ##                                           
+    ##        'Positive' Class : No              
+    ## 
+
+``` r
 library(pROC)
+```
+
+    ## Warning: package 'pROC' was built under R version 4.4.2
+
+    ## Type 'citation("pROC")' for a citation.
+
+    ## 
+    ## Attaching package: 'pROC'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     cov, smooth, var
+
+``` r
 roc_obj <- roc(testData$Decided.to.Pursue.MBA, predictions_prob$Yes)
+```
+
+    ## Setting levels: control = No, case = Yes
+
+    ## Setting direction: controls < cases
+
+``` r
 auc_value <- auc(roc_obj)
 print(paste("AUC:", round(auc_value, 4)))
+```
 
+    ## [1] "AUC: 0.5265"
+
+``` r
 importance <- varImp(xgb_model)
 print("Top 10 Most Important Features:")
-print(importance$importance %>%
+```
+
+    ## [1] "Top 10 Most Important Features:"
+
+``` r
+print(importance$importance %>% 
         as.data.frame() %>%
         rownames_to_column("Feature") %>%
         arrange(desc(Overall)) %>%
         head(10))
+```
 
+    ##                            Feature   Overall
+    ## 1                   GRE.GMAT.Score 100.00000
+    ## 2                Undergraduate.GPA  76.46237
+    ## 3     Undergraduate.Major_Business  73.49391
+    ## 4                      Gender_Male  68.90106
+    ## 5   MBA.Funding.Source_Scholarship  64.21969
+    ## 6          MBA.Funding.Source_Loan  47.47481
+    ## 7    Undergraduate.Major_Economics  36.92216
+    ## 8      Undergraduate.Major_Science  34.23514
+    ## 9   MBA.Funding.Source_Self.funded  28.76076
+    ## 10 Undergraduate.Major_Engineering  27.05750
+
+Model \#2
+
+``` r
+library(tidyverse)
+library(caret)
+library(pROC)
 library(car)
+```
 
+    ## Warning: package 'car' was built under R version 4.4.2
+
+    ## Loading required package: carData
+
+    ## Warning: package 'carData' was built under R version 4.4.2
+
+    ## 
+    ## Attaching package: 'car'
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     recode
+
+    ## The following object is masked from 'package:purrr':
+    ## 
+    ##     some
+
+``` r
 mba_data <- read.csv("mba_decision_dataset.csv", 
                      colClasses = c("Person.ID" = "integer",
-                                    "Age" = "integer",
-                                    "Gender" = "character",
-                                    "Undergraduate.Major" = "character",
-                                    "Undergraduate.GPA" = "numeric",
-                                    "GRE.GMAT.Score" = "integer",
-                                    "MBA.Funding.Source" = "character",
-                                    "Decided.to.Pursue.MBA." = "character"),
+                                  "Age" = "integer",
+                                  "Gender" = "character",
+                                  "Undergraduate.Major" = "character",
+                                  "Undergraduate.GPA" = "numeric",
+                                  "GRE.GMAT.Score" = "integer",
+                                  "MBA.Funding.Source" = "character",
+                                  "Decided.to.Pursue.MBA." = "character"),
                      check.names = TRUE)
 
-str(mba_data)
+print("Data structure after loading:")
+```
 
+    ## [1] "Data structure after loading:"
+
+``` r
+str(mba_data)
+```
+
+    ## 'data.frame':    10000 obs. of  8 variables:
+    ##  $ Person.ID             : int  1 2 3 4 5 6 7 8 9 10 ...
+    ##  $ Age                   : int  27 24 33 31 28 33 25 27 30 23 ...
+    ##  $ Gender                : chr  "Male" "Male" "Female" "Male" ...
+    ##  $ Undergraduate.Major   : chr  "Arts" "Arts" "Business" "Engineering" ...
+    ##  $ Undergraduate.GPA     : num  3.18 3.03 3.66 2.46 2.75 3.58 3.06 2.8 2.06 3.51 ...
+    ##  $ GRE.GMAT.Score        : int  688 791 430 356 472 409 369 588 521 671 ...
+    ##  $ MBA.Funding.Source    : chr  "Loan" "Loan" "Scholarship" "Loan" ...
+    ##  $ Decided.to.Pursue.MBA.: chr  "Yes" "No" "No" "No" ...
+
+``` r
 mba_data$Gender <- factor(mba_data$Gender)
 mba_data$Undergraduate.Major <- factor(mba_data$Undergraduate.Major)
 mba_data$MBA.Funding.Source <- factor(mba_data$MBA.Funding.Source)
@@ -138,19 +329,105 @@ test_data <- model_data[-train_index, ]
 
 model <- glm(MBA_Decision ~ ., data = train_data, family = "binomial")
 
-print(summary(model))
+print("Model Summary:")
+```
 
+    ## [1] "Model Summary:"
+
+``` r
+print(summary(model))
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = MBA_Decision ~ ., family = "binomial", data = train_data)
+    ## 
+    ## Coefficients: (1 not defined because of singularities)
+    ##                                  Estimate Std. Error z value Pr(>|z|)  
+    ## (Intercept)                     4.851e-01  2.546e-01   1.905   0.0568 .
+    ## GenderFemale                   -1.042e-01  1.182e-01  -0.881   0.3782  
+    ## GenderMale                     -7.384e-02  1.176e-01  -0.628   0.5301  
+    ## GenderOther                            NA         NA      NA       NA  
+    ## Undergraduate.MajorBusiness    -3.832e-02  7.729e-02  -0.496   0.6200  
+    ## Undergraduate.MajorEconomics    4.933e-02  7.674e-02   0.643   0.5203  
+    ## Undergraduate.MajorEngineering  1.038e-01  7.772e-02   1.336   0.1815  
+    ## Undergraduate.MajorScience      2.822e-02  7.693e-02   0.367   0.7138  
+    ## MBA.Funding.SourceLoan         -3.788e-02  6.840e-02  -0.554   0.5797  
+    ## MBA.Funding.SourceScholarship  -4.930e-02  6.851e-02  -0.720   0.4717  
+    ## MBA.Funding.SourceSelf.funded  -1.033e-01  6.924e-02  -1.491   0.1358  
+    ## Age                             1.964e-03  6.043e-03   0.325   0.7452  
+    ## Undergraduate.GPA              -3.094e-02  4.264e-02  -0.726   0.4681  
+    ## GRE.GMAT.Score                  4.198e-05  1.541e-04   0.272   0.7853  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for binomial family taken to be 1)
+    ## 
+    ##     Null deviance: 9474.2  on 7000  degrees of freedom
+    ## Residual deviance: 9466.5  on 6988  degrees of freedom
+    ## AIC: 9492.5
+    ## 
+    ## Number of Fisher Scoring iterations: 4
+
+``` r
 predictions_prob <- predict(model, newdata = test_data, type = "response")
 predictions_class <- factor(ifelse(predictions_prob > 0.5, "Yes", "No"), 
-                            levels = levels(test_data$MBA_Decision))
+                          levels = levels(test_data$MBA_Decision))
 
 conf_matrix <- confusionMatrix(predictions_class, test_data$MBA_Decision)
-print(conf_matrix)
+print("Confusion Matrix:")
+```
 
+    ## [1] "Confusion Matrix:"
+
+``` r
+print(conf_matrix)
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction   No  Yes
+    ##        No     0    0
+    ##        Yes 1227 1772
+    ##                                          
+    ##                Accuracy : 0.5909         
+    ##                  95% CI : (0.573, 0.6085)
+    ##     No Information Rate : 0.5909         
+    ##     P-Value [Acc > NIR] : 0.5079         
+    ##                                          
+    ##                   Kappa : 0              
+    ##                                          
+    ##  Mcnemar's Test P-Value : <2e-16         
+    ##                                          
+    ##             Sensitivity : 0.0000         
+    ##             Specificity : 1.0000         
+    ##          Pos Pred Value :    NaN         
+    ##          Neg Pred Value : 0.5909         
+    ##              Prevalence : 0.4091         
+    ##          Detection Rate : 0.0000         
+    ##    Detection Prevalence : 0.0000         
+    ##       Balanced Accuracy : 0.5000         
+    ##                                          
+    ##        'Positive' Class : No             
+    ## 
+
+``` r
 roc_obj <- roc(as.numeric(test_data$MBA_Decision == "Yes"), predictions_prob)
+```
+
+    ## Setting levels: control = 0, case = 1
+
+    ## Setting direction: controls > cases
+
+``` r
 auc_value <- auc(roc_obj)
 print(paste("AUC:", round(auc_value, 3)))
+```
 
+    ## [1] "AUC: 0.512"
+
+``` r
 coef_summary <- summary(model)$coefficients
 importance <- abs(coef_summary[, "z value"])
 importance_df <- data.frame(
@@ -158,3 +435,64 @@ importance_df <- data.frame(
   Importance = importance
 )
 importance_df <- importance_df[order(-importance_df$Importance), ]
+
+print("Top 10 Most Important Features:")
+```
+
+    ## [1] "Top 10 Most Important Features:"
+
+``` r
+print(head(importance_df, 10))
+```
+
+    ##                                                       Feature Importance
+    ## (Intercept)                                       (Intercept)  1.9048495
+    ## MBA.Funding.SourceSelf.funded   MBA.Funding.SourceSelf.funded  1.4914595
+    ## Undergraduate.MajorEngineering Undergraduate.MajorEngineering  1.3360871
+    ## GenderFemale                                     GenderFemale  0.8812055
+    ## Undergraduate.GPA                           Undergraduate.GPA  0.7256374
+    ## MBA.Funding.SourceScholarship   MBA.Funding.SourceScholarship  0.7196538
+    ## Undergraduate.MajorEconomics     Undergraduate.MajorEconomics  0.6429045
+    ## GenderMale                                         GenderMale  0.6279185
+    ## MBA.Funding.SourceLoan                 MBA.Funding.SourceLoan  0.5537814
+    ## Undergraduate.MajorBusiness       Undergraduate.MajorBusiness  0.4958336
+
+``` r
+odds_ratios <- exp(coef(model))
+odds_ratios_df <- data.frame(
+  Feature = names(odds_ratios),
+  OddsRatio = odds_ratios
+)
+
+print("Odds Ratios for Top Features:")
+```
+
+    ## [1] "Odds Ratios for Top Features:"
+
+``` r
+print(head(odds_ratios_df[order(-abs(log(odds_ratios_df$OddsRatio))), ], 10))
+```
+
+    ##                                                       Feature OddsRatio
+    ## (Intercept)                                       (Intercept) 1.6242775
+    ## GenderFemale                                     GenderFemale 0.9010793
+    ## Undergraduate.MajorEngineering Undergraduate.MajorEngineering 1.1094183
+    ## MBA.Funding.SourceSelf.funded   MBA.Funding.SourceSelf.funded 0.9018820
+    ## GenderMale                                         GenderMale 0.9288176
+    ## Undergraduate.MajorEconomics     Undergraduate.MajorEconomics 1.0505722
+    ## MBA.Funding.SourceScholarship   MBA.Funding.SourceScholarship 0.9518934
+    ## Undergraduate.MajorBusiness       Undergraduate.MajorBusiness 0.9624010
+    ## MBA.Funding.SourceLoan                 MBA.Funding.SourceLoan 0.9628318
+    ## Undergraduate.GPA                           Undergraduate.GPA 0.9695318
+
+``` r
+saveRDS(model, "mba_decision_model.rds")
+
+predict_mba_probability <- function(new_data) {
+  new_matrix <- model.matrix(~ Gender + Undergraduate.Major + MBA.Funding.Source + 
+                              Age + Undergraduate.GPA + GRE.GMAT.Score - 1, 
+                            data = new_data)
+  predictions <- predict(model, newdata = data.frame(new_matrix), type = "response")
+  return(predictions)
+}
+```
